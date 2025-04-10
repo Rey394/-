@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的知识框架</title>
+    <title>知识图谱 | 极简主义</title>
     <style>
         body {
             margin: 0;
@@ -12,12 +12,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #ffffff;
+            background-color: #f8f8f8;
             font-family: 'Helvetica Neue', Arial, sans-serif;
             overflow: hidden;
-            background-size: cover;
-            background-position: center;
-            transition: background-image 0.5s ease;
         }
         #container {
             position: relative;
@@ -29,75 +26,372 @@
             border-radius: 50%;
             text-align: center;
             cursor: pointer;
-            transition: all 0.4s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             user-select: none;
-            color: #ffffff;
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            background: #000000;
+            color: #333;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            border: none;
+            font-weight: 300;
         }
         .node:hover {
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
             transform: scale(1.05);
         }
         .category-node {
-            width: 90px;
-            height: 90px;
-            line-height: 90px;
+            width: 100px;
+            height: 100px;
+            line-height: 100px;
             font-size: 16px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
         }
         .sub-node {
-            width: 70px;
-            height: 70px;
-            line-height: 70px;
+            width: 80px;
+            height: 80px;
+            line-height: 80px;
             font-size: 14px;
+            background: #f5f5f5;
+        }
+        .third-node {
+            width: 60px;
+            height: 60px;
+            line-height: 60px;
+            font-size: 12px;
+            background: #eee;
         }
         .line {
             position: absolute;
-            background: linear-gradient(to right, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
+            background: rgba(0, 0, 0, 0.1);
             transform-origin: 0 0;
-            z-index: 1;
+            z-index: -1;
+            height: 1px;
         }
-        #upload-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            background: #000000;
-            color: #ffffff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
-            cursor: pointer;
-            z-index: 20;
+        .title {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 24px;
+            font-weight: 300;
+            color: #333;
+            letter-spacing: 2px;
         }
-        #upload-btn:hover {
-            background: #333333;
-        }
-        #image-upload {
+        .popup {
+            position: absolute;
+            width: 250px;
+            height: 250px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
             display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            z-index: 10;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .popup-title {
+            font-size: 14px;
+            font-weight: 300;
+            color: #333;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .popup-content {
+            width: 80%;
+            height: 70%;
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 11px;
+            color: #333;
+            overflow-y: auto;
+            line-height: 1.4;
+            scrollbar-width: thin;
+            scrollbar-color: #ccc #f5f5f5;
+        }
+        .popup-content::-webkit-scrollbar {
+            width: 5px;
+        }
+        .popup-content::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+        .popup-content::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        .close-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 20px;
+            height: 20px;
+            background: #eee;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 12px;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .close-btn:hover {
+            background: #ddd;
+            color: #333;
         }
     </style>
 </head>
 <body>
-    <div id="container"></div>
-    <button id="upload-btn">上传背景图片</button>
-    <input type="file" id="image-upload" accept="image/*">
+    <div id="container">
+        <div class="title">知识图谱</div>
+        <div id="textPopup" class="popup">
+            <div class="close-btn" onclick="hidePopup()">×</div>
+            <div class="popup-title" id="popupTitle"></div>
+            <div class="popup-content" id="popupContent"></div>
+        </div>
+    </div>
 
     <script>
         const container = document.getElementById('container');
 
         const knowledgeMap = {
-            '哲学': ['形而上学', '伦理学', '逻辑学'],
-            '数学': ['代数', '几何', '概率论'],
-            '物理': ['经典力学', '量子力学', '热力学'],
-            '化学': ['有机化学', '无机化学', '分析化学'],
-            '生物': ['遗传学', '生态学', '细胞学'],
-            '编程': ['算法', '数据结构', '系统设计'],
-            'AI': ['机器学习', '深度学习', 'NLP'],
-            '历史': ['古代史', '近代史', '当代史'],
-            '文学': ['诗歌', '小说', '戏剧'],
-            '艺术': ['绘画', '音乐', '建筑'],
-            '经济': ['微观经济', '宏观经济', '金融'],
-            '技术': ['云计算', '区块链', '物联网']
+            '哲学': {
+                '形而上学': ['本体论', '宇宙论'],
+                '伦理学': ['规范伦理', '应用伦理'],
+                '逻辑学': ['形式逻辑', '辩证逻辑']
+            },
+            '数学': {
+                '代数': ['线性代数', '抽象代数'],
+                '几何': ['欧几里得几何', '非欧几何'],
+                '概率论': ['统计学', '随机过程']
+            },
+            '物理': {
+                '经典力学': ['牛顿力学', '拉格朗日力学'],
+                '量子力学': ['波函数', '不确定性'],
+                '热力学': ['熵', '热机']
+            },
+            '化学': {
+                '有机化学': ['烷烃', '芳香烃'],
+                '无机化学': ['元素周期', '化学键'],
+                '分析化学': ['定性分析', '定量分析']
+            },
+            '生物': {
+                '遗传学': ['孟德尔遗传', '分子遗传'],
+                '生态学': ['生态系统', '种群动态'],
+                '细胞学': ['细胞分裂', '细胞器']
+            },
+            '编程': {
+                '算法': ['排序', '搜索'],
+                '数据结构': ['树', '图'],
+                '系统设计': ['分布式', '微服务']
+            },
+            'AI': {
+                '机器学习': ['监督学习', '无监督学习'],
+                '深度学习': ['神经网络', '卷积网络'],
+                'NLP': ['分词', '语义分析']
+            },
+            '历史': {
+                '古代史': ['中国古代', '西方古代'],
+                '近代史': ['工业革命', '殖民扩张'],
+                '当代史': ['冷战', '全球化']
+            },
+            '文学': {
+                '诗歌': ['古典诗', '现代诗'],
+                '小说': ['现实主义', '魔幻现实'],
+                '戏剧': ['悲剧', '喜剧']
+            },
+            '艺术': {
+                '绘画': ['油画', '水彩'],
+                '音乐': ['古典乐', '流行乐'],
+                '建筑': ['哥特式', '现代主义']
+            },
+            '经济': {
+                '微观经济': ['供需', '市场均衡'],
+                '宏观经济': ['GDP', '通货膨胀'],
+                '金融': ['股票', '债券']
+            },
+            '技术': {
+                '云计算': ['AWS', 'Azure'],
+                '区块链': ['比特币', '以太坊'],
+                '物联网': ['传感器', '智能家居']
+            }
+        };
+
+        const uniqueTexts = {
+            '哲学': {
+                '形而上学': {
+                    '本体论': '本体论研究存在的本质，探讨“什么是存在”这一根本问题，涉及实体、属性和关系的哲学思考。亚里士多德将其称为“第一哲学”，影响深远。',
+                    '宇宙论': '宇宙论关注宇宙的起源、结构和演化，从哲学角度探讨时间、空间和因果性，与现代天文学有密切联系。'
+                },
+                '伦理学': {
+                    '规范伦理': '规范伦理学研究行为的对错准则，如功利主义和义务论，旨在为道德决策提供框架。',
+                    '应用伦理': '应用伦理将理论用于现实问题，如医疗伦理、环境伦理，解决具体道德困境。'
+                },
+                '逻辑学': {
+                    '形式逻辑': '形式逻辑研究推理的结构和规则，如三段论，确保论证的有效性。',
+                    '辩证逻辑': '辩证逻辑源于黑格尔，强调矛盾和变化，是马克思主义哲学的核心工具。'
+                }
+            },
+            '数学': {
+                '代数': {
+                    '线性代数': '线性代数研究向量、矩阵和线性变换，广泛应用于物理和计算机科学。',
+                    '抽象代数': '抽象代数探讨群、环、域等结构，是现代数学的基础分支。'
+                },
+                '几何': {
+                    '欧几里得几何': '欧几里得几何基于平面和直线的公理，是经典几何学的基石。',
+                    '非欧几何': '非欧几何挑战欧几里得第五公设，揭示了弯曲空间的可能性，如球面几何。'
+                },
+                '概率论': {
+                    '统计学': '统计学分析数据的不确定性，用于科学实验和社会研究。',
+                    '随机过程': '随机过程研究随时间变化的随机现象，如马尔可夫链。'
+                }
+            },
+            '物理': {
+                '经典力学': {
+                    '牛顿力学': '牛顿力学基于三大定律，描述宏观物体的运动规律。',
+                    '拉格朗日力学': '拉格朗日力学用能量重构力学，适合复杂系统分析。'
+                },
+                '量子力学': {
+                    '波函数': '波函数描述量子态，是量子力学的核心概念，体现概率性。',
+                    '不确定性': '不确定性原理由海森堡提出，限制了位置和动量的同时精确测量。'
+                },
+                '热力学': {
+                    '熵': '熵衡量系统的无序度，是热力学第二定律的关键。',
+                    '热机': '热机将热能转化为机械能，蒸汽机是其经典例子。'
+                }
+            },
+            '化学': {
+                '有机化学': {
+                    '烷烃': '烷烃是饱和烃，化学性质稳定，常用于燃料和化工原料。',
+                    '芳香烃': '芳香烃具有苯环结构，化学活性独特，广泛存在于染料和药物中。'
+                },
+                '无机化学': {
+                    '元素周期': '元素周期表按原子序数排列，揭示元素性质的周期性变化。',
+                    '化学键': '化学键包括离子键和共价键，决定物质的结构和性质。'
+                },
+                '分析化学': {
+                    '定性分析': '定性分析确定物质的成分，如通过颜色反应识别离子。',
+                    '定量分析': '定量分析测量物质的含量，如滴定法测浓度。'
+                }
+            },
+            '生物': {
+                '遗传学': {
+                    '孟德尔遗传': '孟德尔遗传揭示基因的分离和独立分配规律。',
+                    '分子遗传': '分子遗传研究DNA和RNA如何编码生命信息。'
+                },
+                '生态学': {
+                    '生态系统': '生态系统由生物和环境组成，能量在其中流动。',
+                    '种群动态': '种群动态研究种群大小的变化，受出生率和死亡率影响。'
+                },
+                '细胞学': {
+                    '细胞分裂': '细胞分裂包括有丝分裂和减数分裂，确保遗传物质传递。',
+                    '细胞器': '细胞器如线粒体和内质网，执行细胞的特定功能。'
+                }
+            },
+            '编程': {
+                '算法': {
+                    '排序': '排序算法如快速排序优化数据排列效率。',
+                    '搜索': '搜索算法如二分查找快速定位目标元素。'
+                },
+                '数据结构': {
+                    '树': '树结构如二叉树用于层次化数据存储。',
+                    '图': '图表示节点和边的关系，常用于网络分析。'
+                },
+                '系统设计': {
+                    '分布式': '分布式系统将任务分配到多台机器，提高性能和可靠性。',
+                    '微服务': '微服务架构将应用拆分为小型独立服务，便于开发和维护。'
+                }
+            },
+            'AI': {
+                '机器学习': {
+                    '监督学习': '监督学习用标记数据训练模型，如分类和回归。',
+                    '无监督学习': '无监督学习发现数据中的隐藏模式，如聚类。'
+                },
+                '深度学习': {
+                    '神经网络': '神经网络模仿人脑结构，处理复杂模式。',
+                    '卷积网络': '卷积网络擅长图像处理，通过卷积层提取特征。'
+                },
+                'NLP': {
+                    '分词': '分词将文本分解为单词，是NLP的基础步骤。',
+                    '语义分析': '语义分析理解文本含义，用于情感分析等。'
+                }
+            },
+            '历史': {
+                '古代史': {
+                    '中国古代': '中国古代史包括夏商周至隋唐，文化繁荣。',
+                    '西方古代': '西方古代史涵盖希腊罗马，奠定西方文明基础。'
+                },
+                '近代史': {
+                    '工业革命': '工业革命始于英国，改变了生产方式和社会结构。',
+                    '殖民扩张': '殖民扩张由欧洲主导，影响全球政治格局。'
+                },
+                '当代史': {
+                    '冷战': '冷战是美苏对峙，影响世界近半个世纪。',
+                    '全球化': '全球化促进经济和文化交流，也带来挑战。'
+                }
+            },
+            '文学': {
+                '诗歌': {
+                    '古典诗': '古典诗如唐诗宋词，注重格律和意境。',
+                    '现代诗': '现代诗打破传统形式，强调自由表达。'
+                },
+                '小说': {
+                    '现实主义': '现实主义描绘真实生活，如巴尔扎克作品。',
+                    '魔幻现实': '魔幻现实融合现实与奇幻，如马尔克斯小说。'
+                },
+                '戏剧': {
+                    '悲剧': '悲剧如《哈姆雷特》，揭示人性冲突。',
+                    '喜剧': '喜剧如《仲夏夜之梦》，以幽默化解矛盾。'
+                }
+            },
+            '艺术': {
+                '绘画': {
+                    '油画': '油画以油彩为媒介，色彩丰富，如达芬奇作品。',
+                    '水彩': '水彩轻盈透明，适合表现自然景观。'
+                },
+                '音乐': {
+                    '古典乐': '古典乐如贝多芬交响曲，结构严谨。',
+                    '流行乐': '流行乐旋律简单，贴近大众审美。'
+                },
+                '建筑': {
+                    '哥特式': '哥特式建筑以尖拱和飞扶壁著称，如巴黎圣母院。',
+                    '现代主义': '现代主义建筑追求功能性和简洁，如包豪斯风格。'
+                }
+            },
+            '经济': {
+                '微观经济': {
+                    '供需': '供需理论解释价格如何由市场力量决定。',
+                    '市场均衡': '市场均衡是供需平衡时的状态，决定资源分配。'
+                },
+                '宏观经济': {
+                    'GDP': 'GDP衡量国家经济总量，是宏观经济核心指标。',
+                    '通货膨胀': '通货膨胀导致货币购买力下降，影响经济稳定。'
+                },
+                '金融': {
+                    '股票': '股票代表公司所有权，价格随市场波动。',
+                    '债券': '债券是固定收益证券，政府和企业常用融资工具。'
+                }
+            },
+            '技术': {
+                '云计算': {
+                    'AWS': 'AWS提供弹性计算服务，主导云计算市场。',
+                    'Azure': 'Azure是微软的云平台，集成AI和数据服务。'
+                },
+                '区块链': {
+                    '比特币': '比特币是去中心化数字货币，基于区块链技术。',
+                    '以太坊': '以太坊支持智能合约，扩展了区块链应用。'
+                },
+                '物联网': {
+                    '传感器': '传感器收集环境数据，是物联网的基础。',
+                    '智能家居': '智能家居通过物联网提升生活便利性。'
+                }
+            }
         };
 
         function createLine(x1, y1, x2, y2) {
@@ -108,7 +402,6 @@
             const line = document.createElement('div');
             line.className = 'line';
             line.style.width = `${length}px`;
-            line.style.height = '1px';
             line.style.left = `${x1}px`;
             line.style.top = `${y1}px`;
             line.style.transform = `rotate(${angle}deg)`;
@@ -131,7 +424,7 @@
             node.style.top = `${y}px`;
             container.appendChild(node);
 
-            const nodeRadius = className === 'category-node' ? 45 : 35;
+            const nodeRadius = className === 'category-node' ? 50 : className === 'sub-node' ? 40 : 30;
             const angle = Math.atan2(y - parentY, x - parentX);
             const startPoint = parentRadius === 0 ? { x: parentX, y: parentY } : getEdgePoint(parentX, parentY, parentRadius, angle);
             const endPoint = getEdgePoint(x + nodeRadius, y + nodeRadius, nodeRadius, angle + Math.PI);
@@ -141,16 +434,16 @@
         }
 
         function initCategories() {
-            const radius = 250;
+            const radius = 300;
             const centerX = 450;
             const centerY = 450;
             const categories = Object.keys(knowledgeMap);
             
             categories.forEach((category, index) => {
                 const angle = (index / 12) * 2 * Math.PI;
-                const x = centerX + radius * Math.cos(angle) - 45;
-                const y = centerY + radius * Math.sin(angle) - 45;
-                const node = createNode(category, 'category-node', x, y, centerX, centerY, 0); // parentRadius 为 0 表示从中心点开始
+                const x = centerX + radius * Math.cos(angle) - 50;
+                const y = centerY + radius * Math.sin(angle) - 50;
+                const node = createNode(category, 'category-node', x, y, centerX, centerY, 0);
                 
                 node.addEventListener('click', () => expandSubNodes(category, x, y, angle));
             });
@@ -158,39 +451,64 @@
 
         function expandSubNodes(category, parentX, parentY, parentAngle) {
             document.querySelectorAll('.sub-node').forEach(node => node.remove());
+            document.querySelectorAll('.third-node').forEach(node => node.remove());
             document.querySelectorAll('.line').forEach(line => {
                 if (!line.dataset || !line.dataset.permanent) line.remove();
             });
 
-            const subRadius = 220;
-            const subs = knowledgeMap[category];
+            const subRadius = 180;
+            const subs = Object.keys(knowledgeMap[category]);
             const angleStep = Math.PI / 6;
             const startAngle = parentAngle - angleStep * (subs.length - 1) / 2;
 
             subs.forEach((sub, index) => {
                 const angle = startAngle + index * angleStep;
-                const x = parentX + 45 + subRadius * Math.cos(angle) - 35;
-                const y = parentY + 45 + subRadius * Math.sin(angle) - 35;
-                const node = createNode(sub, 'sub-node', x, y, parentX + 45, parentY + 45, 45);
-                node.addEventListener('click', () => {
-                    alert(`探索 ${category} - ${sub} 的奥秘！（可替换为具体内容展示）`);
+                const x = parentX + 50 + subRadius * Math.cos(angle) - 40;
+                const y = parentY + 50 + subRadius * Math.sin(angle) - 40;
+                const node = createNode(sub, 'sub-node', x, y, parentX + 50, parentY + 50, 50);
+                node.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    expandThirdNodes(category, sub, x, y, angle);
                 });
             });
         }
 
-        const uploadBtn = document.getElementById('upload-btn');
-        const imageUpload = document.getElementById('image-upload');
-        uploadBtn.addEventListener('click', () => imageUpload.click());
-        imageUpload.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    document.body.style.backgroundImage = `url(${event.target.result})`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
+        function expandThirdNodes(category, sub, parentX, parentY, parentAngle) {
+            document.querySelectorAll('.third-node').forEach(node => node.remove());
+            document.querySelectorAll('.line').forEach(line => {
+                if (!line.dataset || !line.dataset.permanent) line.remove();
+            });
+
+            const thirdRadius = 120;
+            const thirds = knowledgeMap[category][sub];
+            const angleStep = Math.PI / 6;
+            const startAngle = parentAngle - angleStep * (thirds.length - 1) / 2;
+
+            thirds.forEach((third, index) => {
+                const angle = startAngle + index * angleStep;
+                const x = parentX + 40 + thirdRadius * Math.cos(angle) - 30;
+                const y = parentY + 40 + thirdRadius * Math.sin(angle) - 30;
+                const node = createNode(third, 'third-node', x, y, parentX + 40, parentY + 40, 40);
+                node.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showPopup(category, sub, third);
+                });
+            });
+        }
+
+        function showPopup(category, sub, third) {
+            const popup = document.getElementById('textPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupContent = document.getElementById('popupContent');
+
+            popupTitle.textContent = `${category} > ${sub} > ${third}`;
+            popupContent.textContent = uniqueTexts[category][sub][third];
+            popup.style.display = 'flex';
+        }
+
+        function hidePopup() {
+            document.getElementById('textPopup').style.display = 'none';
+        }
 
         initCategories();
         document.querySelectorAll('.line').forEach(line => line.dataset = { permanent: true });
