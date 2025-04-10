@@ -1,15 +1,199 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>水波纹效果</title>
-    <link rel="stylesheet" href="style.css">
+    <title>我的知识框架</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #ffffff;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            transition: background-image 0.5s ease;
+        }
+        #container {
+            position: relative;
+            width: 900px;
+            height: 900px;
+        }
+        .node {
+            position: absolute;
+            border-radius: 50%;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            user-select: none;
+            color: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            background: #000000;
+        }
+        .node:hover {
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            transform: scale(1.05);
+        }
+        .category-node {
+            width: 90px;
+            height: 90px;
+            line-height: 90px;
+            font-size: 16px;
+        }
+        .sub-node {
+            width: 70px;
+            height: 70px;
+            line-height: 70px;
+            font-size: 14px;
+        }
+        .line {
+            position: absolute;
+            background: linear-gradient(to right, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.3));
+            transform-origin: 0 0;
+            z-index: 1;
+        }
+        #upload-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: #000000;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 20;
+        }
+        #upload-btn:hover {
+            background: #333333;
+        }
+        #image-upload {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <div class="wave-container">
-        <div class="wave" id="wave"></div>
-    </div>
-    <script src="script.js"></script>
+    <div id="container"></div>
+    <button id="upload-btn">上传背景图片</button>
+    <input type="file" id="image-upload" accept="image/*">
+
+    <script>
+        const container = document.getElementById('container');
+
+        const knowledgeMap = {
+            '哲学': ['形而上学', '伦理学', '逻辑学'],
+            '数学': ['代数', '几何', '概率论'],
+            '物理': ['经典力学', '量子力学', '热力学'],
+            '化学': ['有机化学', '无机化学', '分析化学'],
+            '生物': ['遗传学', '生态学', '细胞学'],
+            '编程': ['算法', '数据结构', '系统设计'],
+            'AI': ['机器学习', '深度学习', 'NLP'],
+            '历史': ['古代史', '近代史', '当代史'],
+            '文学': ['诗歌', '小说', '戏剧'],
+            '艺术': ['绘画', '音乐', '建筑'],
+            '经济': ['微观经济', '宏观经济', '金融'],
+            '技术': ['云计算', '区块链', '物联网']
+        };
+
+        function createLine(x1, y1, x2, y2) {
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.width = `${length}px`;
+            line.style.height = '1px';
+            line.style.left = `${x1}px`;
+            line.style.top = `${y1}px`;
+            line.style.transform = `rotate(${angle}deg)`;
+            container.appendChild(line);
+            return line;
+        }
+
+        function getEdgePoint(x, y, radius, angle) {
+            return {
+                x: x + radius * Math.cos(angle),
+                y: y + radius * Math.sin(angle)
+            };
+        }
+
+        function createNode(text, className, x, y, parentX, parentY, parentRadius) {
+            const node = document.createElement('div');
+            node.className = `node ${className}`;
+            node.textContent = text;
+            node.style.left = `${x}px`;
+            node.style.top = `${y}px`;
+            container.appendChild(node);
+
+            const nodeRadius = className === 'category-node' ? 45 : 35;
+            const angle = Math.atan2(y - parentY, x - parentX);
+            const startPoint = parentRadius === 0 ? { x: parentX, y: parentY } : getEdgePoint(parentX, parentY, parentRadius, angle);
+            const endPoint = getEdgePoint(x + nodeRadius, y + nodeRadius, nodeRadius, angle + Math.PI);
+            createLine(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+            
+            return node;
+        }
+
+        function initCategories() {
+            const radius = 250;
+            const centerX = 450;
+            const centerY = 450;
+            const categories = Object.keys(knowledgeMap);
+            
+            categories.forEach((category, index) => {
+                const angle = (index / 12) * 2 * Math.PI;
+                const x = centerX + radius * Math.cos(angle) - 45;
+                const y = centerY + radius * Math.sin(angle) - 45;
+                const node = createNode(category, 'category-node', x, y, centerX, centerY, 0); // parentRadius 为 0 表示从中心点开始
+                
+                node.addEventListener('click', () => expandSubNodes(category, x, y, angle));
+            });
+        }
+
+        function expandSubNodes(category, parentX, parentY, parentAngle) {
+            document.querySelectorAll('.sub-node').forEach(node => node.remove());
+            document.querySelectorAll('.line').forEach(line => {
+                if (!line.dataset || !line.dataset.permanent) line.remove();
+            });
+
+            const subRadius = 220;
+            const subs = knowledgeMap[category];
+            const angleStep = Math.PI / 6;
+            const startAngle = parentAngle - angleStep * (subs.length - 1) / 2;
+
+            subs.forEach((sub, index) => {
+                const angle = startAngle + index * angleStep;
+                const x = parentX + 45 + subRadius * Math.cos(angle) - 35;
+                const y = parentY + 45 + subRadius * Math.sin(angle) - 35;
+                const node = createNode(sub, 'sub-node', x, y, parentX + 45, parentY + 45, 45);
+                node.addEventListener('click', () => {
+                    alert(`探索 ${category} - ${sub} 的奥秘！（可替换为具体内容展示）`);
+                });
+            });
+        }
+
+        const uploadBtn = document.getElementById('upload-btn');
+        const imageUpload = document.getElementById('image-upload');
+        uploadBtn.addEventListener('click', () => imageUpload.click());
+        imageUpload.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    document.body.style.backgroundImage = `url(${event.target.result})`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        initCategories();
+        document.querySelectorAll('.line').forEach(line => line.dataset = { permanent: true });
+    </script>
 </body>
 </html>
